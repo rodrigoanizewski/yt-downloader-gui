@@ -138,7 +138,7 @@ class UIManager:
         about_text = (
             "yt-downloader-gui\n"
             "Version 1.0.0\n\n"
-            "Developed by Ujjwal Nova\n\n"
+            "Developed by ukr\n\n"
             "A professional YouTube video and audio downloader\n"
             "with support for playlists and channels.\n\n"
             "Report bugs via our support channel."
