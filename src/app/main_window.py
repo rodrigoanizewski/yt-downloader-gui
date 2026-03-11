@@ -60,6 +60,18 @@ class YTDGUI(QMainWindow):
     activity_page: QWidget
     status_bar: QStatusBar
     mode_var: str  # Stores the current download mode
+    
+    # Editing feature UI elements
+    preset_combo: Optional[QComboBox] = None
+    container_combo: Optional[QComboBox] = None
+    video_codec_combo: Optional[QComboBox] = None
+    audio_export_combo: Optional[QComboBox] = None
+    # Advanced audio UI elements
+    audio_codec_combo: Optional[QComboBox] = None
+    sample_rate_combo: Optional[QComboBox] = None
+    pcm_bit_depth_combo: Optional[QComboBox] = None
+    aac_bitrate_combo: Optional[QComboBox] = None
+    fps_combo: Optional[QComboBox] = None
 
     def __init__(self, base_dir: str):
         """
@@ -115,6 +127,24 @@ class YTDGUI(QMainWindow):
         self.use_cookies = False
         self.cookie_browser = "chrome"
         self.cookie_file: Optional[str] = None
+        
+        # Editing feature settings
+        self.editing_preset = "YouTube Edit"  # Default preset
+        self.container_format = "MP4"
+        self.video_codec = "H264"
+        self.audio_export_mode = "AAC"
+        self.use_audio_only = False
+        
+        # Advanced audio settings
+        self.audio_codec = "AAC"
+        self.sample_rate = "48000"
+        self.pcm_bit_depth = "24 bit"
+        self.aac_bitrate = "320k"
+        self.fps = "Original"
+        
+        # Clip cutter settings
+        self.clip_start = ""
+        self.clip_end = ""
 
     def _connect_signals(self) -> None:
         """Connect Qt signals for thread-safe GUI updates."""

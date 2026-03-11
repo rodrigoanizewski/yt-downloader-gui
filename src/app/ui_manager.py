@@ -276,6 +276,225 @@ class UIManager:
         # Initialize visibility based on default mode
         self.mode_changed(self.main_app.mode_combo.currentText())
 
+        # =====================================================================
+        # EDITING FEATURES SECTION
+        # =====================================================================
+        editing_label = QLabel("Video Editing Options (Advanced):")
+        editing_label.setObjectName("header_label")
+        layout.addWidget(editing_label)
+
+        # Preset selector
+        preset_layout = QHBoxLayout()
+        preset_text = QLabel("Preset:")
+        self.main_app.preset_combo = QComboBox()
+        
+        from .editing_config import get_preset_names, get_preset
+        
+        preset_names = get_preset_names()
+        self.main_app.preset_combo.addItems(preset_names)
+        self.main_app.preset_combo.setCurrentText("YouTube Edit")
+        self.main_app.preset_combo.currentTextChanged.connect(
+            self._on_preset_changed
+        )
+        
+        preset_layout.addWidget(preset_text)
+        preset_layout.addWidget(self.main_app.preset_combo)
+        layout.addLayout(preset_layout)
+
+        # Container format selection
+        container_layout = QHBoxLayout()
+        container_text = QLabel("Container:")
+        self.main_app.container_combo = QComboBox()
+        
+        from .editing_config import CONTAINERS, CONTAINER_DESCRIPTIONS
+        
+        self.main_app.container_combo.addItems(list(CONTAINERS.keys()))
+        self.main_app.container_combo.setCurrentText("MP4")
+        self.main_app.container_combo.currentTextChanged.connect(
+            self._on_container_changed
+        )
+        
+        container_layout.addWidget(container_text)
+        container_layout.addWidget(self.main_app.container_combo)
+        layout.addLayout(container_layout)
+
+        # Video codec selection
+        codec_layout = QHBoxLayout()
+        codec_text = QLabel("Video Codec:")
+        self.main_app.video_codec_combo = QComboBox()
+        
+        from .editing_config import VIDEO_CODECS
+        
+        codec_names = list(VIDEO_CODECS.keys())
+        self.main_app.video_codec_combo.addItems(codec_names)
+        self.main_app.video_codec_combo.setCurrentText("H264")
+        self.main_app.video_codec_combo.currentTextChanged.connect(
+            self._on_codec_changed
+        )
+        
+        codec_layout.addWidget(codec_text)
+        codec_layout.addWidget(self.main_app.video_codec_combo)
+        layout.addLayout(codec_layout)
+
+        # Audio export selection
+        audio_layout = QHBoxLayout()
+        audio_text = QLabel("Audio Export:")
+        self.main_app.audio_export_combo = QComboBox()
+        
+        from .editing_config import AUDIO_EXPORT_OPTIONS
+        
+        audio_names = list(AUDIO_EXPORT_OPTIONS.keys())
+        self.main_app.audio_export_combo.addItems(audio_names)
+        self.main_app.audio_export_combo.setCurrentText("AAC")
+        self.main_app.audio_export_combo.currentTextChanged.connect(
+            self._on_audio_export_changed
+        )
+        
+        audio_layout.addWidget(audio_text)
+        audio_layout.addWidget(self.main_app.audio_export_combo)
+        layout.addLayout(audio_layout)
+
+        # =====================================================================
+        # ADVANCED AUDIO CONTROLS SECTION
+        # =====================================================================
+        
+        # Audio codec selection
+        audio_codec_layout = QHBoxLayout()
+        audio_codec_text = QLabel("Audio Codec:")
+        self.main_app.audio_codec_combo = QComboBox()
+        
+        from .editing_config import AUDIO_CODECS
+        
+        audio_codec_names = list(AUDIO_CODECS.keys())
+        self.main_app.audio_codec_combo.addItems(audio_codec_names)
+        self.main_app.audio_codec_combo.setCurrentText("AAC")
+        self.main_app.audio_codec_combo.currentTextChanged.connect(
+            self._on_audio_codec_changed
+        )
+        
+        audio_codec_layout.addWidget(audio_codec_text)
+        audio_codec_layout.addWidget(self.main_app.audio_codec_combo)
+        layout.addLayout(audio_codec_layout)
+
+        # Sample rate selection
+        sample_rate_layout = QHBoxLayout()
+        sample_rate_text = QLabel("Sample Rate:")
+        self.main_app.sample_rate_combo = QComboBox()
+        
+        from .editing_config import SAMPLE_RATES
+        
+        sample_rate_keys = list(SAMPLE_RATES.keys())
+        self.main_app.sample_rate_combo.addItems(sample_rate_keys)
+        self.main_app.sample_rate_combo.setCurrentText("48000")
+        self.main_app.sample_rate_combo.currentTextChanged.connect(
+            self._on_sample_rate_changed
+        )
+        
+        sample_rate_layout.addWidget(sample_rate_text)
+        sample_rate_layout.addWidget(self.main_app.sample_rate_combo)
+        layout.addLayout(sample_rate_layout)
+
+        # PCM bit depth selection (only shown for PCM codec)
+        pcm_layout = QHBoxLayout()
+        pcm_text = QLabel("PCM Bit Depth:")
+        self.main_app.pcm_bit_depth_combo = QComboBox()
+        
+        from .editing_config import PCM_BIT_DEPTHS
+        
+        pcm_bit_keys = list(PCM_BIT_DEPTHS.keys())
+        self.main_app.pcm_bit_depth_combo.addItems(pcm_bit_keys)
+        self.main_app.pcm_bit_depth_combo.setCurrentText("24 bit")
+        self.main_app.pcm_bit_depth_combo.currentTextChanged.connect(
+            self._on_pcm_bit_depth_changed
+        )
+        
+        pcm_layout.addWidget(pcm_text)
+        pcm_layout.addWidget(self.main_app.pcm_bit_depth_combo)
+        self.main_app.pcm_bit_depth_label = pcm_text
+        self.main_app.pcm_layout = pcm_layout
+        layout.addLayout(pcm_layout)
+        # Hide PCM controls initially (only show when PCM codec selected)
+        pcm_text.hide()
+        self.main_app.pcm_bit_depth_combo.hide()
+
+        # AAC bitrate selection (only shown for AAC codec)
+        aac_layout = QHBoxLayout()
+        aac_text = QLabel("AAC Bitrate:")
+        self.main_app.aac_bitrate_combo = QComboBox()
+        
+        from .editing_config import AAC_BITRATES
+        
+        aac_bitrate_keys = list(AAC_BITRATES.keys())
+        self.main_app.aac_bitrate_combo.addItems(aac_bitrate_keys)
+        self.main_app.aac_bitrate_combo.setCurrentText("320k")
+        self.main_app.aac_bitrate_combo.currentTextChanged.connect(
+            self._on_aac_bitrate_changed
+        )
+        
+        aac_layout.addWidget(aac_text)
+        aac_layout.addWidget(self.main_app.aac_bitrate_combo)
+        self.main_app.aac_bitrate_label = aac_text
+        layout.addLayout(aac_layout)
+        # Show AAC controls initially (AAC is default)
+        aac_text.show()
+        self.main_app.aac_bitrate_combo.show()
+
+        # FPS limiting
+        fps_layout = QHBoxLayout()
+        fps_text = QLabel("FPS Limit:")
+        self.main_app.fps_combo = QComboBox()
+        
+        from .editing_config import FPS_OPTIONS
+        
+        fps_keys = list(FPS_OPTIONS.keys())
+        self.main_app.fps_combo.addItems(fps_keys)
+        self.main_app.fps_combo.setCurrentText("Original")
+        self.main_app.fps_combo.currentTextChanged.connect(
+            self._on_fps_changed
+        )
+        
+        fps_layout.addWidget(fps_text)
+        fps_layout.addWidget(self.main_app.fps_combo)
+        layout.addLayout(fps_layout)
+
+        # =====================================================================
+        # CLIP CUTTER SECTION (OPTIONAL FEATURE)
+        # =====================================================================
+        
+        clip_label = QLabel("Clip Cutter (Optional - leave empty to disable):")
+        clip_label.setObjectName("header_label")
+        layout.addWidget(clip_label)
+
+        # Start time input
+        start_layout = QHBoxLayout()
+        start_text = QLabel("Start Time (HH:MM:SS):")
+        self.main_app.clip_start_input = QLineEdit()
+        self.main_app.clip_start_input.setPlaceholderText("00:01:20")
+        self.main_app.clip_start_input.textChanged.connect(self._on_clip_start_changed)
+        
+        start_layout.addWidget(start_text)
+        start_layout.addWidget(self.main_app.clip_start_input)
+        layout.addLayout(start_layout)
+
+        # End time input
+        end_layout = QHBoxLayout()
+        end_text = QLabel("End Time (HH:MM:SS):")
+        self.main_app.clip_end_input = QLineEdit()
+        self.main_app.clip_end_input.setPlaceholderText("00:02:10")
+        self.main_app.clip_end_input.textChanged.connect(self._on_clip_end_changed)
+        
+        end_layout.addWidget(end_text)
+        end_layout.addWidget(self.main_app.clip_end_input)
+        layout.addLayout(end_layout)
+
+        # =====================================================================
+        # END CLIP CUTTER SECTION
+        # =====================================================================
+
+        # =====================================================================
+        # END ADVANCED AUDIO CONTROLS SECTION
+        # =====================================================================
+
         # Download button
         download_btn = QPushButton("Download")
         download_btn.setObjectName("download_button")
@@ -303,6 +522,193 @@ class UIManager:
         else:
             self.main_app.video_quality_label.show()
             self.main_app.video_quality_combo.show()
+
+    def _on_preset_changed(self, preset_name: str) -> None:
+        """
+        Handle preset change. Apply preset to UI and app state.
+
+        Args:
+            preset_name: Name of selected preset
+        """
+        from .editing_config import apply_preset
+        
+        self.main_app.editing_preset = preset_name
+        config = apply_preset(preset_name)
+        
+        # Update UI controls to match preset
+        if self.main_app.container_combo:
+            self.main_app.container_combo.blockSignals(True)
+            self.main_app.container_combo.setCurrentText(config["container"])
+            self.main_app.container_combo.blockSignals(False)
+        
+        if self.main_app.video_codec_combo:
+            self.main_app.video_codec_combo.blockSignals(True)
+            self.main_app.video_codec_combo.setCurrentText(config["video_codec"])
+            self.main_app.video_codec_combo.blockSignals(False)
+        
+        if self.main_app.audio_export_combo:
+            self.main_app.audio_export_combo.blockSignals(True)
+            self.main_app.audio_export_combo.setCurrentText(config["audio_export"])
+            self.main_app.audio_export_combo.blockSignals(False)
+        
+        # Update advanced audio parameters from preset
+        if self.main_app.audio_codec_combo:
+            self.main_app.audio_codec_combo.blockSignals(True)
+            self.main_app.audio_codec_combo.setCurrentText(config.get("audio_codec", "AAC"))
+            self.main_app.audio_codec_combo.blockSignals(False)
+        
+        if self.main_app.sample_rate_combo:
+            self.main_app.sample_rate_combo.blockSignals(True)
+            self.main_app.sample_rate_combo.setCurrentText(config.get("sample_rate", "48000"))
+            self.main_app.sample_rate_combo.blockSignals(False)
+        
+        if self.main_app.pcm_bit_depth_combo:
+            self.main_app.pcm_bit_depth_combo.blockSignals(True)
+            self.main_app.pcm_bit_depth_combo.setCurrentText(config.get("pcm_bit_depth", "24 bit"))
+            self.main_app.pcm_bit_depth_combo.blockSignals(False)
+        
+        if self.main_app.aac_bitrate_combo:
+            self.main_app.aac_bitrate_combo.blockSignals(True)
+            self.main_app.aac_bitrate_combo.setCurrentText(config.get("aac_bitrate", "320k"))
+            self.main_app.aac_bitrate_combo.blockSignals(False)
+        
+        if self.main_app.fps_combo:
+            self.main_app.fps_combo.blockSignals(True)
+            self.main_app.fps_combo.setCurrentText(config.get("fps", "Original"))
+            self.main_app.fps_combo.blockSignals(False)
+        
+        # Update app state with all preset values
+        self.main_app.container_format = config["container"]
+        self.main_app.video_codec = config["video_codec"]
+        self.main_app.audio_export_mode = config["audio_export"]
+        self.main_app.use_audio_only = config["use_audio_only"]
+        
+        # Update advanced audio parameters in app state
+        self.main_app.audio_codec = config.get("audio_codec", "AAC")
+        self.main_app.sample_rate = config.get("sample_rate", "48000")
+        self.main_app.pcm_bit_depth = config.get("pcm_bit_depth", "24 bit")
+        self.main_app.aac_bitrate = config.get("aac_bitrate", "320k")
+        self.main_app.fps = config.get("fps", "Original")
+        
+        # Update control visibility based on audio codec
+        self._on_audio_codec_changed(self.main_app.audio_codec)
+
+    def _on_container_changed(self, container_name: str) -> None:
+        """
+        Handle container format change.
+
+        Args:
+            container_name: Selected container format (MP4, MKV, MOV)
+        """
+        self.main_app.container_format = container_name
+        # Reset preset to "Custom" or keep last selected
+        if self.main_app.preset_combo:
+            self.main_app.preset_combo.blockSignals(True)
+            # Don't change preset, just update the internal state
+            self.main_app.preset_combo.blockSignals(False)
+
+    def _on_codec_changed(self, codec_name: str) -> None:
+        """
+        Handle video codec change.
+
+        Args:
+            codec_name: Selected video codec (H264, H265, ProRes, Copy)
+        """
+        self.main_app.video_codec = codec_name
+
+    def _on_audio_export_changed(self, audio_name: str) -> None:
+        """
+        Handle audio export mode change.
+
+        Args:
+            audio_name: Selected audio export mode (WAV, FLAC, AAC, Copy)
+        """
+        self.main_app.audio_export_mode = audio_name
+
+    def _on_audio_codec_changed(self, codec_name: str) -> None:
+        """
+        Handle audio codec change and show/hide dependent controls.
+
+        Args:
+            codec_name: Selected audio codec (Copy, PCM, AAC, FLAC)
+        """
+        self.main_app.audio_codec = codec_name
+        
+        # Show/hide dependent controls based on codec type
+        if codec_name == "PCM":
+            # Show PCM bit depth control for PCM codec
+            self.main_app.pcm_bit_depth_label.show()
+            self.main_app.pcm_bit_depth_combo.show()
+            # Hide AAC bitrate control
+            self.main_app.aac_bitrate_label.hide()
+            self.main_app.aac_bitrate_combo.hide()
+        elif codec_name == "AAC":
+            # Hide PCM bit depth control for AAC codec
+            self.main_app.pcm_bit_depth_label.hide()
+            self.main_app.pcm_bit_depth_combo.hide()
+            # Show AAC bitrate control
+            self.main_app.aac_bitrate_label.show()
+            self.main_app.aac_bitrate_combo.show()
+        else:  # Copy or FLAC
+            # Hide both dependent controls
+            self.main_app.pcm_bit_depth_label.hide()
+            self.main_app.pcm_bit_depth_combo.hide()
+            self.main_app.aac_bitrate_label.hide()
+            self.main_app.aac_bitrate_combo.hide()
+
+    def _on_sample_rate_changed(self, sample_rate: str) -> None:
+        """
+        Handle sample rate change.
+
+        Args:
+            sample_rate: Selected sample rate (Original, 44100, 48000)
+        """
+        self.main_app.sample_rate = sample_rate
+
+    def _on_pcm_bit_depth_changed(self, bit_depth: str) -> None:
+        """
+        Handle PCM bit depth change.
+
+        Args:
+            bit_depth: Selected bit depth (16 bit or 24 bit)
+        """
+        self.main_app.pcm_bit_depth = bit_depth
+
+    def _on_aac_bitrate_changed(self, bitrate: str) -> None:
+        """
+        Handle AAC bitrate change.
+
+        Args:
+            bitrate: Selected AAC bitrate (128k, 192k, 320k)
+        """
+        self.main_app.aac_bitrate = bitrate
+
+    def _on_fps_changed(self, fps: str) -> None:
+        """
+        Handle FPS limit change.
+
+        Args:
+            fps: Selected FPS (Original, 30 fps, 60 fps)
+        """
+        self.main_app.fps = fps
+
+    def _on_clip_start_changed(self, text: str) -> None:
+        """
+        Handle clip start time change.
+
+        Args:
+            text: Start time in HH:MM:SS format
+        """
+        self.main_app.clip_start = text.strip()
+
+    def _on_clip_end_changed(self, text: str) -> None:
+        """
+        Handle clip end time change.
+
+        Args:
+            text: End time in HH:MM:SS format
+        """
+        self.main_app.clip_end = text.strip()
 
     def create_activity_page(self) -> QWidget:
         """

@@ -24,6 +24,14 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QTimer, pyqtSignal, QObject, QMetaObject, Qt, Q_ARG
 from PyQt6.QtGui import QIcon
 
+from .command_builder import create_editing_command_builder
+from .ffmpeg_progress import (
+    extract_ffmpeg_progress_time,
+    parse_ffmpeg_time,
+    calculate_ffmpeg_progress,
+    is_ffmpeg_progress_line,
+)
+
 if TYPE_CHECKING:
     from .main_window import YTDGUI
 
@@ -46,6 +54,8 @@ class DownloadManager:
         self.signals.error.connect(self._on_playlist_error)
         self.signals.result.connect(self._on_playlist_result)
         self.signals.download_complete.connect(self._on_download_complete)
+        # Track video duration for FFmpeg progress calculation
+        self.current_video_duration = 0
 
     def _on_playlist_error(self, error_info: tuple) -> None:
         """Handles errors from the playlist processing thread."""
@@ -152,6 +162,22 @@ class DownloadManager:
                 if "MP3" not in mode
                 else "Best Available"
             ),
+            # Add editing feature parameters
+            "container": self.main_app.container_format,
+            "video_codec": self.main_app.video_codec,
+            "audio_export": self.main_app.audio_export_mode,
+            "preset": self.main_app.editing_preset,
+            # Add advanced audio parameters
+            "audio_codec": self.main_app.audio_codec,
+            "sample_rate": self.main_app.sample_rate,
+            "pcm_bit_depth": self.main_app.pcm_bit_depth,
+            "aac_bitrate": self.main_app.aac_bitrate,
+            "fps": self.main_app.fps,
+            # Add clip cutter parameters
+            "clip_start": self.main_app.clip_start,
+            "clip_end": self.main_app.clip_end,
+            # Add playlist flag (False for single downloads)
+            "is_playlist": False,
         }
 
         self.main_app.download_queue.append(task)
@@ -403,6 +429,22 @@ class DownloadManager:
                         if "MP3" not in mode
                         else "Best Available"
                     ),
+                    # Add editing feature parameters
+                    "container": self.main_app.container_format,
+                    "video_codec": self.main_app.video_codec,
+                    "audio_export": self.main_app.audio_export_mode,
+                    "preset": self.main_app.editing_preset,
+                    # Add advanced audio parameters
+                    "audio_codec": self.main_app.audio_codec,
+                    "sample_rate": self.main_app.sample_rate,
+                    "pcm_bit_depth": self.main_app.pcm_bit_depth,
+                    "aac_bitrate": self.main_app.aac_bitrate,
+                    "fps": self.main_app.fps,
+                    # Add clip cutter parameters
+                    "clip_start": self.main_app.clip_start,
+                    "clip_end": self.main_app.clip_end,
+                    # Add playlist flag (True for playlist/channel downloads)
+                    "is_playlist": True,
                 }
                 self.main_app.download_queue.append(task)
                 selected_count += 1
@@ -453,6 +495,10 @@ class DownloadManager:
                 - mode: Download mode
                 - audio_quality: Audio quality for MP3 extraction
                 - video_quality: Video quality preference
+                - container: Output container (MP4, MKV, MOV)
+                - video_codec: Video codec (Copy, H264, H265, ProRes)
+                - audio_export: Audio export mode (Copy, WAV, FLAC, AAC)
+                - preset: Editing preset name
 
         This method runs in a background thread to avoid blocking the UI.
         """
@@ -468,20 +514,64 @@ class DownloadManager:
             yt_dlp_path = os.path.join(self.main_app.base_dir, "bin", "yt-dlp.exe")
             ffmpeg_path = os.path.join(self.main_app.base_dir, "bin", "ffmpeg.exe")
 
+            # Create command builder for editing features
+            cmd_builder = create_editing_command_builder(yt_dlp_path, ffmpeg_path)
+
             # Build command based on mode
             if "Video" in mode and "MP3" not in mode:
-                # Video download
-                cmd = self._build_video_download_command(
-                    yt_dlp_path, ffmpeg_path, url, save_path, video_quality
+                # Video download with editing parameters
+                container = task.get("container", "MP4")
+                video_codec = task.get("video_codec", "H264")
+                audio_export = task.get("audio_export", "AAC")
+                preset = task.get("preset", "YouTube Edit")
+                # Advanced audio parameters
+                audio_codec = task.get("audio_codec", "AAC")
+                sample_rate = task.get("sample_rate", "48000")
+                pcm_bit_depth = task.get("pcm_bit_depth", "24 bit")
+                aac_bitrate = task.get("aac_bitrate", "320k")
+                fps = task.get("fps", "Original")
+                # Clip cutter parameters
+                clip_start = task.get("clip_start", "")
+                clip_end = task.get("clip_end", "")
+                # Playlist flag
+                is_playlist = task.get("is_playlist", False)
+                
+                # Validate codec/container compatibility
+                is_valid, error_msg = cmd_builder.validate_codec_container_compatibility(
+                    container, video_codec, audio_codec
+                )
+                if not is_valid:
+                    self.main_app.log_message(f"ERROR: {error_msg}")
+                    self.main_app.download_error_signal.emit((
+                        "Invalid Configuration",
+                        f"Cannot download with current settings:\n\n{error_msg}"
+                    ))
+                    self.process_queue()
+                    return
+                
+                cmd = cmd_builder.build_download_command(
+                    url=url,
+                    output_path=save_path,
+                    container=container,
+                    video_codec=video_codec,
+                    audio_export=audio_export,
+                    use_audio_only=False,
+                    video_quality=video_quality,
+                    audio_codec=audio_codec,
+                    sample_rate=sample_rate,
+                    pcm_bit_depth=pcm_bit_depth,
+                    aac_bitrate=aac_bitrate,
+                    fps=fps,
+                    clip_start=clip_start,
+                    clip_end=clip_end,
+                    is_playlist=is_playlist,
                 )
             else:
-                # Audio extraction
-                cmd = self._build_audio_download_command(
-                    yt_dlp_path,
-                    ffmpeg_path,
-                    url,
-                    save_path,
-                    task.get("audio_quality", "320"),
+                # Audio extraction (MP3 mode) - use standard command
+                cmd = cmd_builder.build_standard_audio_command(
+                    url=url,
+                    output_path=save_path,
+                    audio_quality=task.get("audio_quality", "320"),
                 )
 
             # Add cookie support if enabled
@@ -507,10 +597,17 @@ class DownloadManager:
                 )
                 info = json.loads(info_result.stdout)
                 title = info.get("title", "Unknown Title")
+                # Extract video duration for FFmpeg progress calculation
+                self.current_video_duration = info.get("duration", 0)
             except:
                 title = "Unknown Title"
+                self.current_video_duration = 0
 
             self.main_app.log_message(f"Starting download: {title}")
+            
+            # Log the full command for debugging (Part 5 - Improved logging)
+            formatted_cmd = cmd_builder.format_command_for_logging(cmd)
+            self.main_app.log_message(f"Command: {formatted_cmd}")
 
             # Execute download command
             creationflags = 0
@@ -557,14 +654,19 @@ class DownloadManager:
 
     def _parse_progress(self, line: str) -> Optional[int]:
         """
-        Parse download progress from yt-dlp output line.
+        Parse download and encoding progress from output.
+
+        Handles two types of progress:
+        1. yt-dlp download progress: "[download] X% of ..."
+        2. FFmpeg encoding progress: "out_time=HH:MM:SS.ms"
 
         Args:
-            line: A single line of output from yt-dlp.
+            line: A single line of output from yt-dlp or FFmpeg.
 
         Returns:
-            The progress percentage as an integer, or None if not found.
+            The progress percentage as an integer (0-100), or None if not found.
         """
+        # First try to parse yt-dlp download progress
         # Look for percentage values (e.g., "  1.5% of ...")
         match = re.search(r"\[download\]\s+([0-9.]+)%", line)
         if match:
@@ -572,6 +674,20 @@ class DownloadManager:
                 return int(float(match.group(1)))
             except (ValueError, IndexError):
                 pass
+        
+        # If no download progress found, check for FFmpeg encoding progress
+        # This handles the encoding/merging phase with real-time progress
+        if is_ffmpeg_progress_line(line) and self.current_video_duration > 0:
+            time_str = extract_ffmpeg_progress_time(line)
+            if time_str:
+                current_seconds = parse_ffmpeg_time(time_str)
+                if current_seconds is not None:
+                    progress = calculate_ffmpeg_progress(
+                        current_seconds, self.current_video_duration
+                    )
+                    if progress is not None:
+                        return progress
+        
         return None
 
     def _build_video_download_command(

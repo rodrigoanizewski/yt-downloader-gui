@@ -10,6 +10,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication
 from app.main_window import YTDGUI
+from app.path_resolver import get_base_path
 
 
 def main():
@@ -26,12 +27,8 @@ def main():
     app.setApplicationVersion("1.0.0")
 
     # Determine application base directory
-    if getattr(sys, "frozen", False):
-        # Running as compiled executable
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        # Running as Python script
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Handles both PyInstaller executable and Python script environments
+    base_dir = get_base_path()
 
     # Create and show main window
     window = YTDGUI(base_dir)
